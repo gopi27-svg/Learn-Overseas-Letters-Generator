@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Letter Generator</title>
+<title>Letter Generator | USDC Global</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -71,7 +71,7 @@
 
 <header>
   <h1>Offer &amp; Appointment Letter Generator</h1>
-  <p>Learn Overseas</p>
+  <p>USDC Global · Learn Overseas</p>
 </header>
 
 <div class="wrap">
@@ -478,8 +478,8 @@ bulkGenerateBtn.addEventListener('click', async () => {
     tableHtml += `<tr>
       <td>${r.employeeName || '-'}</td>
       <td class="${r.success ? 'ok' : 'fail'}">${r.success ? 'Success' : ('Failed: ' + (r.error||''))}</td>
-      <td>${r.success ? `<a href="${r.pdfLink}" target="_blank">Open</a>` : '-'}</td>
-      <td>${r.success ? `<a href="${r.docxLink}" target="_blank">Open</a>` : '-'}</td>
+      <td>${r.success ? `<a href="${r.pdfDownloadUrl}" target="_blank">Download</a> · <a href="${r.pdfLink}" target="_blank">Open</a>` : '-'}</td>
+      <td>${r.success ? `<a href="${r.docxDownloadUrl}" target="_blank">Download</a> · <a href="${r.docxLink}" target="_blank">Open</a>` : '-'}</td>
     </tr>`;
   });
   tableHtml += '</table>';
