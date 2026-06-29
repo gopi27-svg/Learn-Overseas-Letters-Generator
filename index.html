@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Letter Generator | USDC Global</title>
+<style>
+  :root{
+    --teal-900:#0b3d36;
+    --teal-700:#0f5c4f;
+    --teal-600:#137a68;
+    --emerald-500:#1e9e7c;
+    --emerald-100:#e3f5ef;
+    --paper:#fbfaf7;
+    --ink:#16241f;
+    --muted:#5b6b66;
+    --line:#d8e6e1;
+    --error:#b3261e;
+    --error-bg:#fbeceb;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Tahoma, Arial, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    background:linear-gradient(135deg,var(--teal-900),var(--teal-700));
+    color:#fff;
+    padding:28px 24px 24px;
+  }
+  header h1{
+    margin:0 0 4px;
+    font-size:22px;
+    letter-spacing:.2px;
+  }
+  header p{
+    margin:0;
+    color:#cfe9e1;
+    font-size:13px;
+  }
+  .wrap{
+    max-width:780px;
+    margin:0 auto;
+    padding:24px 16px 60px;
+  }
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:18px;
+  }
+  .card h2{
+    font-size:14px;
+    text-transform:uppercase;
+    letter-spacing:.6px;
+    color:var(--teal-700);
+    margin:0 0 16px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--line);
+  }
+  .row{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+  @media(min-width:600px){
+    .row.two{grid-template-columns:1fr 1fr;}
+  }
+  label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  label .req{color:var(--error);}
+  input, select{
+    width:100%;
+    padding:10px 11px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    font-size:14px;
+    color:var(--ink);
+    background:#fff;
+    transition:border-color .15s;
+  }
+  input:focus, select:focus{
+    outline:none;
+    border-color:var(--emerald-500);
+    box-shadow:0 0 0 3px var(--emerald-100);
+  }
+  .field{margin-bottom:0;}
+  .grid3{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+  @media(min-width:700px){
+    .grid3{grid-template-columns:1fr 1fr 1fr;}
+  }
+  .top-select-card{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  @media(max-width:520px){
+    .top-select-card{grid-template-columns:1fr;}
+  }
+  button#generateBtn{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:8px;
+    background:var(--emerald-500);
+    color:#fff;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  button#generateBtn:hover{background:var(--teal-700);}
+  button#generateBtn:disabled{background:#9bbab2;cursor:not-allowed;}
+  .msg{
+    margin-top:14px;
+    padding:13px 14px;
+    border-radius:8px;
+    font-size:13.5px;
+    line-height:1.5;
+    display:none;
+  }
+  .msg.success{display:block;background:var(--emerald-100);color:var(--teal-900);border:1px solid var(--emerald-500);}
+  .msg.error{display:block;background:var(--error-bg);color:var(--error);border:1px solid var(--error);}
+  .msg a{color:var(--teal-700);font-weight:600;text-decoration:underline;}
+  .hint{font-size:12px;color:var(--muted);margin-top:-8px;margin-bottom:14px;}
+  .spinner{
+    display:none;
+    width:16px;height:16px;
+    border:2px solid #ffffff66;
+    border-top-color:#fff;
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+    vertical-align:middle;
+    margin-right:8px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Offer &amp; Appointment Letter Generator</h1>
+  <p>USDC Global · Learn Overseas</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>Letter Setup</h2>
+    <div class="top-select-card">
+      <div class="field">
+        <label>Letter Type <span class="req">*</span></label>
+        <select id="letterType">
+          <option value="offer">Offer Letter</option>
+          <option value="appointment">Appointment Letter</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Letterhead <span class="req">*</span></label>
+        <select id="letterHead">
+          <option value="with">With Letterhead</option>
+          <option value="without">Without Letterhead</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <form id="letterForm">
+    <div id="formSections"></div>
+
+    <button id="generateBtn" type="submit">
+      <span class="spinner" id="spinner"></span>
+      <span id="btnLabel">Generate Letter</span>
+    </button>
+
+    <div class="msg" id="resultMsg"></div>
+  </form>
+
+</div>
+
+<script>
+/* ============== CONFIG ============== */
+// Paste your Render proxy base URL here (no trailing slash)
+const RENDER_URL = 'PASTE_YOUR_RENDER_URL_HERE';
+
+/* ============== FIELD DEFINITIONS ==============
+   Mirrors code.gs exactly. excelHeader is only used for reference;
+   "key" is what gets sent to the backend. */
+const OFFER_NO_FIELD = { excelHeader:'Offer Letter No', key:'Offer_Letter_No', type:'text', required:true, label:'Offer Letter No' };
+
+const BASE_FIELDS = [
+  { excelHeader:'Date of Joining', key:'Date_of_Joining', type:'date', required:true, label:'Date of Joining' },
+  { excelHeader:'Employee Full Name', key:'Employee_Full_Name', type:'text', required:true, label:'Employee Full Name' },
+  { excelHeader:'Designation In Offer Letter', key:'Designation_In_Offer_Letter', type:'text', required:true, label:'Designation' },
+  { excelHeader:'Location', key:'Location', type:'text', required:true, label:'Location' },
+  { excelHeader:'Annual CTC', key:'Annual_CTC', type:'number', required:true, label:'Annual CTC (₹)' },
+  { excelHeader:'Total Gross', key:'Total_Gross', type:'number', required:true, label:'Total Gross (₹)' }
+];
+
+const SALARY_PM_FIELDS = [
+  { key:'Basic_and_DA_PM', label:'Basic and DA' },
+  { key:'HRA_PM', label:'HRA' },
+  { key:'Conveyance_PM', label:'Conveyance' },
+  { key:'CCA_PM', label:'CCA' },
+  { key:'Medical_PM', label:'Medical' },
+  { key:'Other_PM', label:'Other' },
+  { key:'Employer_PF_PM', label:'Employer PF' },
+  { key:'Employer_ESI_PM', label:'Employer ESI' },
+  { key:'Gratuity_PM', label:'Gratuity' },
+  { key:'Part_of_CTC_PM', label:'Part of CTC' },
+  { key:'Cost_to_Company_PM', label:'Cost to Company' }
+].map(f => ({ ...f, type:'number', required:false }));
+
+const SALARY_PA_FIELDS = [
+  { key:'Basic_and_DA_PA', label:'Basic and DA' },
+  { key:'HRA_PA', label:'HRA' },
+  { key:'Conveyance_Allowance_PA', label:'Conveyance Allowance' },
+  { key:'CCA_PA', label:'CCA' },
+  { key:'Medical_Allowance_PA', label:'Medical Allowance' },
+  { key:'Other_Allowance_PA', label:'Other Allowance' },
+  { key:'Total_Gross_Salary_PA', label:'Total Gross Salary' },
+  { key:'Employer_PF_PA', label:'Employer PF' },
+  { key:'Employer_ESI_PA', label:'Employer ESI' },
+  { key:'Gratuity_PA', label:'Gratuity' },
+  { key:'Part_of_CTC_PA', label:'Part of CTC' },
+  { key:'Cost_to_Company_PA', label:'Cost to Company' }
+].map(f => ({ ...f, type:'number', required:false }));
+
+function getFieldDefs(letterType){
+  let fields = [];
+  if (letterType === 'offer') fields.push(OFFER_NO_FIELD);
+  fields = fields.concat(BASE_FIELDS, SALARY_PM_FIELDS, SALARY_PA_FIELDS);
+  return fields;
+}
+
+/* ============== RENDER FORM ============== */
+const letterTypeEl = document.getElementById('letterType');
+const letterHeadEl = document.getElementById('letterHead');
+const formSections = document.getElementById('formSections');
+
+function inputHtml(f){
+  const reqAttr = f.required ? 'required' : '';
+  const reqStar = f.required ? '<span class="req">*</span>' : '';
+  const type = f.type === 'number' ? 'number' : (f.type === 'date' ? 'date' : 'text');
+  const step = f.type === 'number' ? 'step="0.01"' : '';
+  return `
+    <div class="field">
+      <label>${f.label}${reqStar}</label>
+      <input type="${type}" ${step} id="f_${f.key}" name="${f.key}" ${reqAttr} placeholder="${f.type==='number' ? '0' : ''}">
+    </div>`;
+}
+
+function renderForm(){
+  const letterType = letterTypeEl.value;
+  const offerExtra = letterType === 'offer' ? [OFFER_NO_FIELD] : [];
+
+  let html = '';
+
+  html += `<div class="card"><h2>Letter Details</h2><div class="row two">`;
+  offerExtra.forEach(f => html += inputHtml(f));
+  html += inputHtml(BASE_FIELDS[0]); // Date of Joining
+  html += inputHtml(BASE_FIELDS[1]); // Employee Full Name
+  html += inputHtml(BASE_FIELDS[2]); // Designation
+  html += inputHtml(BASE_FIELDS[3]); // Location
+  html += `</div></div>`;
+
+  html += `<div class="card"><h2>CTC Summary</h2><div class="row two">`;
+  html += inputHtml(BASE_FIELDS[4]); // Annual CTC
+  html += inputHtml(BASE_FIELDS[5]); // Total Gross
+  html += `</div></div>`;
+
+  html += `<div class="card"><h2>Monthly Salary Breakup (Per Month)</h2><div class="grid3">`;
+  SALARY_PM_FIELDS.forEach(f => html += inputHtml(f));
+  html += `</div></div>`;
+
+  html += `<div class="card"><h2>Annual Salary Breakup (Per Annum)</h2><div class="grid3">`;
+  SALARY_PA_FIELDS.forEach(f => html += inputHtml(f));
+  html += `</div></div>`;
+
+  formSections.innerHTML = html;
+}
+
+letterTypeEl.addEventListener('change', renderForm);
+renderForm();
+
+/* ============== SUBMIT ============== */
+const form = document.getElementById('letterForm');
+const generateBtn = document.getElementById('generateBtn');
+const spinner = document.getElementById('spinner');
+const btnLabel = document.getElementById('btnLabel');
+const resultMsg = document.getElementById('resultMsg');
+
+function showMsg(type, html){
+  resultMsg.className = 'msg ' + type;
+  resultMsg.innerHTML = html;
+}
+
+function base64ToBlobDownload(base64, filename, mime){
+  const byteChars = atob(base64);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  resultMsg.style.display = 'none';
+
+  if (!RENDER_URL || RENDER_URL.indexOf('PASTE_') === 0) {
+    showMsg('error', 'The portal is not fully set up yet — RENDER_URL is missing in index.html.');
+    return;
+  }
+
+  const letterType = letterTypeEl.value;
+  const letterHead = letterHeadEl.value;
+  const fieldDefs = getFieldDefs(letterType);
+
+  const fields = {};
+  fieldDefs.forEach(f => {
+    const el = document.getElementById('f_' + f.key);
+    fields[f.key] = el ? el.value : '';
+  });
+
+  generateBtn.disabled = true;
+  spinner.style.display = 'inline-block';
+  btnLabel.textContent = 'Generating…';
+
+  try {
+    const res = await fetch(RENDER_URL + '/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ letterType, letterHead, fields })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showMsg('error', 'Could not generate the letter: ' + (data.error || 'Unknown error.'));
+      return;
+    }
+
+    base64ToBlobDownload(data.pdfBase64, data.pdfFileName, 'application/pdf');
+    base64ToBlobDownload(data.docxBase64, data.docxFileName, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    showMsg('success',
+      'Letter generated and downloaded (PDF + DOCX). A copy has also been saved to Drive and logged:<br>' +
+      '<a href="' + data.pdfLink + '" target="_blank">Open PDF in Drive</a> &nbsp;·&nbsp; ' +
+      '<a href="' + data.docxLink + '" target="_blank">Open DOCX in Drive</a>'
+    );
+  } catch (err) {
+    showMsg('error', 'Request failed: ' + err.message);
+  } finally {
+    generateBtn.disabled = false;
+    spinner.style.display = 'none';
+    btnLabel.textContent = 'Generate Letter';
+  }
+});
+</script>
+
+</body>
+</html>
