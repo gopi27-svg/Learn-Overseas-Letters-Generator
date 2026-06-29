@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Letter Generator | USDC Global</title>
+<title>Letter Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -71,7 +71,7 @@
 
 <header>
   <h1>Offer &amp; Appointment Letter Generator</h1>
-  <p>USDC Global · Learn Overseas</p>
+  <p>Learn Overseas</p>
 </header>
 
 <div class="wrap">
@@ -497,13 +497,28 @@ bulkGenerateBtn.addEventListener('click', async () => {
 
   if (successResults.length > 0) {
     document.getElementById('downloadAllPdfsBtn').addEventListener('click', () => {
-      successResults.forEach(r => window.open(r.pdfDownloadUrl, '_blank'));
+      successResults.forEach((r, i) => downloadFromUrlStaggered(r.pdfDownloadUrl, i));
     });
     document.getElementById('downloadAllDocxBtn').addEventListener('click', () => {
-      successResults.forEach(r => window.open(r.docxDownloadUrl, '_blank'));
+      successResults.forEach((r, i) => downloadFromUrlStaggered(r.docxDownloadUrl, i));
     });
   }
 });
+
+// Triggers a direct file download (not a new tab) for each URL, staggered
+// by a few hundred ms apart. This avoids the browser's popup blocker, which
+// kicks in when multiple window.open() calls fire in a single click handler.
+function downloadFromUrlStaggered(url, index){
+  setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, index * 400);
+}
 </script>
 
 </body>
