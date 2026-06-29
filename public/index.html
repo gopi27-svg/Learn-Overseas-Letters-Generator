@@ -62,6 +62,9 @@
   .progress-bar{height:8px;background:var(--line);border-radius:5px;overflow:hidden;margin:14px 0;}
   .progress-fill{height:100%;background:var(--emerald-500);width:0%;transition:width .25s;}
   .hidden{display:none !important;}
+  .download-buttons{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .dl-btn{flex:1;min-width:180px;background:var(--teal-700);color:#fff;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  .dl-btn:hover{background:var(--teal-900);}
 </style>
 </head>
 <body>
@@ -107,6 +110,10 @@
         <span id="btnLabel">Generate Letter</span>
       </button>
       <div class="msg" id="resultMsg"></div>
+      <div id="downloadButtons" class="download-buttons hidden">
+        <button type="button" id="downloadPdfBtn" class="dl-btn">⬇ Download PDF</button>
+        <button type="button" id="downloadDocxBtn" class="dl-btn">⬇ Download Word Document</button>
+      </div>
     </form>
   </div>
 
@@ -274,6 +281,10 @@ const generateBtn = document.getElementById('generateBtn');
 const spinner = document.getElementById('spinner');
 const btnLabel = document.getElementById('btnLabel');
 const resultMsg = document.getElementById('resultMsg');
+const downloadButtons = document.getElementById('downloadButtons');
+const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+const downloadDocxBtn = document.getElementById('downloadDocxBtn');
+let lastGeneratedData = null;
 
 function showMsg(el, type, html){ el.className = 'msg ' + type; el.innerHTML = html; }
 
@@ -313,6 +324,7 @@ async function callApi(payload, timeoutMs = 100000){
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   resultMsg.style.display = 'none';
+  downloadButtons.classList.add('hidden');
 
   const letterType = letterTypeEl.value;
   const letterHead = letterHeadEl.value;
@@ -331,15 +343,25 @@ form.addEventListener('submit', async (e) => {
 
   if (!data.success) {
     showMsg(resultMsg, 'error', 'Could not generate the letter: ' + (data.error || 'Unknown error.'));
+    downloadButtons.classList.add('hidden');
   } else {
-    base64ToBlobDownload(data.pdfBase64, data.pdfFileName, 'application/pdf');
-    base64ToBlobDownload(data.docxBase64, data.docxFileName, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    lastGeneratedData = data;
     showMsg(resultMsg, 'success',
-      'Letter generated and downloaded (PDF + DOCX). Also saved to Drive and logged:<br>' +
+      'Letter generated successfully. Use the buttons below to download, or open the saved copy in Drive:<br>' +
       '<a href="' + data.pdfLink + '" target="_blank">Open PDF in Drive</a> &nbsp;·&nbsp; ' +
-      '<a href="' + data.docxLink + '" target="_blank">Open DOCX in Drive</a>');
+      '<a href="' + data.docxLink + '" target="_blank">Open Word Document in Drive</a>');
+    downloadButtons.classList.remove('hidden');
   }
   generateBtn.disabled = false; spinner.style.display = 'none'; btnLabel.textContent = 'Generate Letter';
+});
+
+downloadPdfBtn.addEventListener('click', () => {
+  if (!lastGeneratedData) return;
+  base64ToBlobDownload(lastGeneratedData.pdfBase64, lastGeneratedData.pdfFileName, 'application/pdf');
+});
+downloadDocxBtn.addEventListener('click', () => {
+  if (!lastGeneratedData) return;
+  base64ToBlobDownload(lastGeneratedData.docxBase64, lastGeneratedData.docxFileName, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 });
 
 /* ============== BULK MODE ============== */
@@ -367,6 +389,16 @@ function chunkArray(arr, size){
   return out;
 }
 
+// Converts a JS Date to a plain "YYYY-MM-DD" string using LOCAL date parts
+// (not toISOString(), which converts to UTC and can shift the date back by
+// a day for timezones ahead of UTC, e.g. India).
+function toLocalDateStr(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
 bulkGenerateBtn.addEventListener('click', async () => {
   bulkMsg.style.display = 'none';
   bulkResultsWrap.innerHTML = '';
@@ -389,7 +421,7 @@ bulkGenerateBtn.addEventListener('click', async () => {
         const key = HEADER_TO_KEY[h.toString().trim()];
         if (key) {
           let val = r[h];
-          if (val instanceof Date) val = val.toISOString();
+          if (val instanceof Date) val = toLocalDateStr(val);
           mapped[key] = val;
         }
       });
@@ -433,7 +465,7 @@ bulkGenerateBtn.addEventListener('click', async () => {
     `Done — ${successCount} letter(s) generated successfully${failCount ? `, ${failCount} failed` : ''}.` +
     (folderUrl ? ` <a href="${folderUrl}" target="_blank">Open Drive folder</a>` : ''));
 
-  let tableHtml = '<table><tr><th>Employee</th><th>Status</th><th>PDF</th><th>DOCX</th></tr>';
+  let tableHtml = '<table><tr><th>Employee</th><th>Status</th><th>PDF</th><th>Word Document</th></tr>';
   allResults.forEach(r => {
     tableHtml += `<tr>
       <td>${r.employeeName || '-'}</td>
