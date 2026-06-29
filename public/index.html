@@ -483,7 +483,26 @@ bulkGenerateBtn.addEventListener('click', async () => {
     </tr>`;
   });
   tableHtml += '</table>';
-  bulkResultsWrap.innerHTML = tableHtml;
+
+  const successResults = allResults.filter(r => r.success);
+  let buttonsHtml = '';
+  if (successResults.length > 0) {
+    buttonsHtml = `<div class="download-buttons" style="margin-top:14px;">
+      <button type="button" id="downloadAllPdfsBtn" class="dl-btn">⬇ Download All PDFs (${successResults.length})</button>
+      <button type="button" id="downloadAllDocxBtn" class="dl-btn">⬇ Download All Word Documents (${successResults.length})</button>
+    </div>`;
+  }
+
+  bulkResultsWrap.innerHTML = buttonsHtml + tableHtml;
+
+  if (successResults.length > 0) {
+    document.getElementById('downloadAllPdfsBtn').addEventListener('click', () => {
+      successResults.forEach(r => window.open(r.pdfDownloadUrl, '_blank'));
+    });
+    document.getElementById('downloadAllDocxBtn').addEventListener('click', () => {
+      successResults.forEach(r => window.open(r.docxDownloadUrl, '_blank'));
+    });
+  }
 });
 </script>
 
