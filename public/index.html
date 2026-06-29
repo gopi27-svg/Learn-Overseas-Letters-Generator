@@ -488,36 +488,38 @@ bulkGenerateBtn.addEventListener('click', async () => {
   let buttonsHtml = '';
   if (successResults.length > 0) {
     buttonsHtml = `<div class="download-buttons" style="margin-top:14px;">
-      <button type="button" id="downloadAllPdfsBtn" class="dl-btn">⬇ Download All PDFs (${successResults.length})</button>
-      <button type="button" id="downloadAllDocxBtn" class="dl-btn">⬇ Download All Word Documents (${successResults.length})</button>
+      <button type="button" id="downloadAllPdfsBtn" class="dl-btn">⬇ Download All PDFs as ZIP (${successResults.length})</button>
+      <button type="button" id="downloadAllDocxBtn" class="dl-btn">⬇ Download All Word Documents as ZIP (${successResults.length})</button>
     </div>`;
   }
 
   bulkResultsWrap.innerHTML = buttonsHtml + tableHtml;
 
   if (successResults.length > 0) {
-    document.getElementById('downloadAllPdfsBtn').addEventListener('click', () => {
-      successResults.forEach((r, i) => downloadFromUrlStaggered(r.pdfDownloadUrl, i));
-    });
-    document.getElementById('downloadAllDocxBtn').addEventListener('click', () => {
-      successResults.forEach((r, i) => downloadFromUrlStaggered(r.docxDownloadUrl, i));
-    });
+    document.getElementById('downloadAllPdfsBtn').addEventListener('click', () => downloadAllAsZip(successResults, 'pdf'));
+    document.getElementById('downloadAllDocxBtn').addEventListener('click', () => downloadAllAsZip(successResults, 'docx'));
   }
 });
 
-// Triggers a direct file download (not a new tab) for each URL, staggered
-// by a few hundred ms apart. This avoids the browser's popup blocker, which
-// kicks in when multiple window.open() calls fire in a single click handler.
-function downloadFromUrlStaggered(url, index){
-  setTimeout(() => {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }, index * 400);
+async function downloadAllAsZip(results, type){
+  const btn = document.getElementById(type === 'pdf' ? 'downloadAllPdfsBtn' : 'downloadAllDocxBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Zipping…';
+
+  const fileIds = results.map(r => type === 'pdf' ? r.pdfFileId : r.docxFileId).filter(Boolean);
+  const zipName = (letterTypeEl.value === 'offer' ? 'Offer_Letters' : 'Appointment_Letters') + '_' + (type === 'pdf' ? 'PDFs' : 'Word_Documents') + '.zip';
+
+  const data = await callApi({ action: 'zipFiles', fileIds, zipName }, 110000);
+
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  if (!data.success) {
+    alert('Could not create the zip: ' + (data.error || 'Unknown error.'));
+    return;
+  }
+  base64ToBlobDownload(data.zipBase64, data.zipFileName, 'application/zip');
 }
 </script>
 
