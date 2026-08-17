@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Letter Generator</title>
+<title>Letter Generator | USDC Global</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -29,8 +29,8 @@
   .field{margin-bottom:0;}
   .grid3{display:grid;grid-template-columns:1fr;gap:14px;}
   @media(min-width:700px){.grid3{grid-template-columns:1fr 1fr 1fr;}}
-  .top-select-card{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  @media(max-width:520px){.top-select-card{grid-template-columns:1fr;}}
+  .top-select-card{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media(max-width:600px){.top-select-card{grid-template-columns:1fr;}}
   button{padding:14px;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s;}
   button#generateBtn, button#bulkGenerateBtn{width:100%;background:var(--emerald-500);color:#fff;}
   button#generateBtn:hover, button#bulkGenerateBtn:hover{background:var(--teal-700);}
@@ -71,7 +71,7 @@
 
 <header>
   <h1>Offer &amp; Appointment Letter Generator</h1>
-  <p>Learn Overseas</p>
+  <p>USDC Global · Learn Overseas</p>
 </header>
 
 <div class="wrap">
@@ -79,6 +79,13 @@
   <div class="card">
     <h2>Letter Setup</h2>
     <div class="top-select-card">
+      <div class="field">
+        <label>Entity <span class="req">*</span></label>
+        <select id="entity">
+          <option value="lo">Learn Overseas</option>
+          <option value="seito">SEITO</option>
+        </select>
+      </div>
       <div class="field">
         <label>Letter Type <span class="req">*</span></label>
         <select id="letterType">
@@ -122,6 +129,7 @@
     <div class="card">
       <h2>Step 1 — Download Template</h2>
       <div class="note">Download the template matching the Letter Type selected above, fill one row per employee, then upload it below. Only the basic details + monthly Gross Salary are needed — all salary breakup figures and Annual CTC are calculated automatically.</div>
+      <div id="seitoApptWarn" class="msg error hidden" style="margin-bottom:12px;">SEITO Appointment Letter template is not set up yet. Please add the Google Doc IDs in code.gs and redeploy, then come back to this.</div>
       <div class="template-btns">
         <a id="offerTemplateLink" href="/Offer_Letter_Bulk_Template.xlsx" download>⬇ Download Offer Letter Template</a>
         <a id="appointmentTemplateLink" href="/Appointment_Letter_Bulk_Template.xlsx" download>⬇ Download Appointment Letter Template</a>
@@ -213,6 +221,7 @@ function switchTab(tab){
 /* ============== SINGLE MODE — RENDER FORM ============== */
 const letterTypeEl = document.getElementById('letterType');
 const letterHeadEl = document.getElementById('letterHead');
+const entityEl = document.getElementById('entity');
 const formSections = document.getElementById('formSections');
 
 function inputHtml(f){
@@ -273,14 +282,23 @@ function renderForm(){
   recalc();
 }
 letterTypeEl.addEventListener('change', renderForm);
+entityEl.addEventListener('change', renderForm);
 renderForm();
 
 function updateTemplateButtons(){
   const lt = letterTypeEl.value;
-  document.getElementById('offerTemplateLink').classList.toggle('hidden', lt !== 'offer');
-  document.getElementById('appointmentTemplateLink').classList.toggle('hidden', lt !== 'appointment');
+  const ent = entityEl.value;
+  const offerBtn = document.getElementById('offerTemplateLink');
+  const apptBtn = document.getElementById('appointmentTemplateLink');
+  if (offerBtn) offerBtn.classList.toggle('hidden', lt !== 'offer');
+  if (apptBtn) apptBtn.classList.toggle('hidden', lt !== 'appointment');
+
+  // Show warning if SEITO appointment letter template not yet set up
+  const seitoWarn = document.getElementById('seitoApptWarn');
+  if (seitoWarn) seitoWarn.classList.toggle('hidden', !(ent === 'seito' && lt === 'appointment'));
 }
 letterTypeEl.addEventListener('change', updateTemplateButtons);
+entityEl.addEventListener('change', updateTemplateButtons);
 updateTemplateButtons();
 
 /* ============== SINGLE MODE — SUBMIT ============== */
@@ -336,6 +354,7 @@ form.addEventListener('submit', async (e) => {
 
   const letterType = letterTypeEl.value;
   const letterHead = letterHeadEl.value;
+  const entity = entityEl.value;
   const autoCalc = !document.getElementById('manualBreakup').checked;
 
   const fieldDefs = [
@@ -347,7 +366,7 @@ form.addEventListener('submit', async (e) => {
 
   generateBtn.disabled = true; spinner.style.display = 'inline-block'; btnLabel.textContent = 'Generating…';
 
-  const data = await callApi({ action:'generate', letterType, letterHead, autoCalc, fields });
+  const data = await callApi({ action:'generate', letterType, letterHead, entity, autoCalc, fields });
 
   if (!data.success) {
     showMsg(resultMsg, 'error', 'Could not generate the letter: ' + (data.error || 'Unknown error.'));
@@ -452,7 +471,7 @@ bulkGenerateBtn.addEventListener('click', async () => {
 
   for (const chunk of chunks) {
     bulkBtnLabel.textContent = `Processing ${processed} / ${rows.length}…`;
-    const data = await callApi({ action:'generateBulkChunk', letterType, letterHead, rows: chunk }, 100000);
+    const data = await callApi({ action:'generateBulkChunk', letterType, letterHead, entity: entityEl.value, rows: chunk }, 100000);
 
     if (!data.success) {
       allResults.push(...chunk.map(r => ({ employeeName: r.Employee_Full_Name, success:false, error: data.error || 'Chunk failed' })));
