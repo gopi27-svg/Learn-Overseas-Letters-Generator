@@ -168,6 +168,8 @@ const BASE_REQUIRED = [
 ];
 const TOTAL_GROSS_FIELD = { key:'Total_Gross', type:'number', required:true, label:'Total Gross (Monthly) ₹' };
 const ANNUAL_CTC_FIELD = { key:'Annual_CTC', type:'number', required:false, label:'Annual CTC (auto-calculated) ₹' };
+const INCENTIVE_FIELD = { key:'Annual_Performance_Incentive', type:'number', required:false, label:'Annual Performance Incentive ₹' };
+const TOTAL_CTC_FIELD = { key:'Total_Cost_to_Company', type:'number', required:false, label:'Total Cost to Company (auto-calculated) ₹' };
 
 const SALARY_PM_FIELDS = [
   { key:'Basic_and_DA_PM', label:'Basic and DA' },{ key:'HRA_PM', label:'HRA' },
@@ -188,16 +190,19 @@ const SALARY_PA_FIELDS = [
 ].map(f => ({ ...f, type:'number', required:false }));
 
 /* ============== JS MIRROR OF SALARY FORMULA (live preview only) ============== */
-function computeSalaryBreakup(gross){
+function computeSalaryBreakup(gross, annualIncentive){
   gross = Number(gross) || 0;
+  annualIncentive = Number(annualIncentive) || 0;
   const basicDA = gross*0.60, hra = gross*0.15, conveyance = gross*0.04,
         cca = gross*0.02, medical = gross*0.06, other = gross*0.13;
   const pfBase = (gross - hra) * 0.12;
   const employerPF = pfBase > 1800 ? 1800 : pfBase;
   const employerESI = gross <= 21000 ? gross * 0.0075 : 0;
   const gratuity = basicDA * 0.0481;
-  const partOfCTC = gross;
-  const costToCompany = partOfCTC + employerPF + employerESI + gratuity;
+  const partOfCTC = employerPF + employerESI + gratuity;
+  const costToCompany = gross + partOfCTC;
+  const annualCTC = costToCompany * 12;
+  const totalCTC = annualCTC + annualIncentive;
   return {
     Basic_and_DA_PM: basicDA, HRA_PM: hra, Conveyance_PM: conveyance, CCA_PM: cca,
     Medical_PM: medical, Other_PM: other, Employer_PF_PM: employerPF, Employer_ESI_PM: employerESI,
@@ -206,7 +211,9 @@ function computeSalaryBreakup(gross){
     Medical_Allowance_PA: medical*12, Other_Allowance_PA: other*12, Total_Gross_Salary_PA: gross*12,
     Employer_PF_PA: employerPF*12, Employer_ESI_PA: employerESI*12, Gratuity_PA: gratuity*12,
     Part_of_CTC_PA: partOfCTC*12, Cost_to_Company_PA: costToCompany*12,
-    Annual_CTC: costToCompany*12
+    Annual_CTC: annualCTC,
+    Annual_Performance_Incentive: annualIncentive,
+    Total_Cost_to_Company: totalCTC
   };
 }
 
@@ -244,7 +251,9 @@ function renderForm(){
     <div class="toggle-row"><input type="checkbox" id="manualBreakup"> Enter salary breakup manually instead of auto-calculating</div>
     <div class="row two">`;
   html += inputHtml(TOTAL_GROSS_FIELD);
+  html += inputHtml(INCENTIVE_FIELD);
   html += inputHtml(ANNUAL_CTC_FIELD);
+  html += inputHtml(TOTAL_CTC_FIELD);
   html += `</div></div>`;
 
   html += `<div class="card"><h2>Monthly Salary Breakup (Per Month)</h2><div class="grid3">`;
@@ -262,20 +271,25 @@ function renderForm(){
   const manualCheckbox = document.getElementById('manualBreakup');
   const allBreakupKeys = [...SALARY_PM_FIELDS, ...SALARY_PA_FIELDS].map(f => f.key);
   const annualCtcEl = document.getElementById('f_Annual_CTC');
+  const incentiveEl = document.getElementById('f_Annual_Performance_Incentive');
+  const totalCtcEl = document.getElementById('f_Total_Cost_to_Company');
 
   function setBreakupDisabled(disabled){
     allBreakupKeys.forEach(k => { const el = document.getElementById('f_'+k); if (el) el.disabled = disabled; });
     if (annualCtcEl) annualCtcEl.disabled = disabled;
+    if (totalCtcEl) totalCtcEl.disabled = disabled;
   }
 
   function recalc(){
     if (manualCheckbox.checked) return;
-    const computed = computeSalaryBreakup(grossEl.value);
+    const computed = computeSalaryBreakup(grossEl.value, incentiveEl ? incentiveEl.value : 0);
     allBreakupKeys.forEach(k => { const el = document.getElementById('f_'+k); if (el) el.value = Math.round(computed[k]); });
     if (annualCtcEl) annualCtcEl.value = Math.round(computed.Annual_CTC);
+    if (totalCtcEl) totalCtcEl.value = Math.round(computed.Total_Cost_to_Company);
   }
 
   grossEl.addEventListener('input', recalc);
+  if (incentiveEl) incentiveEl.addEventListener('input', recalc);
   manualCheckbox.addEventListener('change', () => { setBreakupDisabled(!manualCheckbox.checked); if (!manualCheckbox.checked) recalc(); });
 
   setBreakupDisabled(true); // auto-calc ON by default
@@ -359,7 +373,8 @@ form.addEventListener('submit', async (e) => {
 
   const fieldDefs = [
     ...(letterType==='offer' ? [OFFER_NO_FIELD] : []),
-    ...BASE_REQUIRED, TOTAL_GROSS_FIELD, ANNUAL_CTC_FIELD, ...SALARY_PM_FIELDS, ...SALARY_PA_FIELDS
+    ...BASE_REQUIRED, TOTAL_GROSS_FIELD, INCENTIVE_FIELD, ANNUAL_CTC_FIELD, TOTAL_CTC_FIELD,
+    ...SALARY_PM_FIELDS, ...SALARY_PA_FIELDS
   ];
   const fields = {};
   fieldDefs.forEach(f => { const el = document.getElementById('f_'+f.key); fields[f.key] = el ? el.value : ''; });
