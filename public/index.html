@@ -89,6 +89,11 @@
   .entity-list-item{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:#f8fbfa;border:1px solid var(--line);border-radius:7px;margin-bottom:8px;font-size:13.5px;}
   .entity-list-item .entity-badge{font-size:11px;background:var(--emerald-100);color:var(--teal-700);border-radius:4px;padding:2px 7px;font-weight:600;margin-left:8px;}
   .entity-list-item .del-btn{background:var(--error-bg);color:var(--error);border:1px solid var(--error);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;}
+  .entity-list-item .edit-btn{background:var(--admin-bg);color:var(--admin-text);border:1px solid var(--admin-line);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px;}
+  .entity-list-item .action-btns{display:flex;gap:6px;align-items:center;}
+  /* Edit modal */
+  .edit-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .edit-modal-box{background:#fff;border-radius:14px;padding:28px 24px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.22);}
   .modal-section-title{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin:0 0 10px;}
   .url-hint{font-size:11.5px;color:var(--muted);margin-top:4px;}
 </style>
@@ -254,6 +259,43 @@
       <div class="admin-msg" id="adminSaveMsg"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- ===================== EDIT ENTITY MODAL ===================== -->
+<div id="editOverlay" class="edit-modal-overlay hidden" onclick="if(event.target===this)closeEditModal()">
+  <div class="edit-modal-box">
+    <h2 style="margin:0 0 4px;font-size:18px;color:var(--teal-900);">✏️ Edit Entity</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 18px;">Update the Google Doc template URLs for <strong id="editEntityTitle"></strong>.</p>
+    <input type="hidden" id="editEntityKey">
+    <div class="field" style="margin-bottom:14px;">
+      <label style="font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;">Display Name <span class="req">*</span></label>
+      <input type="text" id="editEntityName" placeholder="Entity display name">
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;">Offer Letter – With Letterhead <span class="req">*</span></label>
+      <input type="url" id="editOfferWith" placeholder="https://docs.google.com/document/d/…">
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;">Offer Letter – Without Letterhead <span class="req">*</span></label>
+      <input type="url" id="editOfferWithout" placeholder="https://docs.google.com/document/d/…">
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;">Appointment Letter – With Letterhead <span class="req">*</span></label>
+      <input type="url" id="editApptWith" placeholder="https://docs.google.com/document/d/…">
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;">Appointment Letter – Without Letterhead <span class="req">*</span></label>
+      <input type="url" id="editApptWithout" placeholder="https://docs.google.com/document/d/…">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;">
+      <button class="btn-primary" id="saveEditBtn" onclick="submitEditEntity()">
+        <span class="spinner" id="editSpinner" style="border-top-color:var(--teal-700);border-color:#ccc;display:none;"></span>
+        Save Changes
+      </button>
+      <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+    </div>
+    <div class="admin-msg" id="editMsg"></div>
   </div>
 </div>
 
@@ -738,6 +780,7 @@ async function refreshEntityList(){
   const data = await callApi({ action: 'getEntities' }, 15000);
   if (data.success && data.entities) {
     allEntities = data.entities;
+    allEntityData = data.entities; // store full data for edit prefill
     populateEntityDropdown();
   }
 
@@ -749,9 +792,13 @@ async function refreshEntityList(){
 
   listEl.innerHTML = entities.map(e => {
     const isBuiltin = BUILTIN_KEYS.includes(e.key);
+    const safeName = e.name.replace(/'/g, "\\'");
     return `<div class="entity-list-item">
       <span><strong>${e.name}</strong> <span class="entity-badge">${e.key}</span>${isBuiltin ? ' <span style="font-size:11px;color:var(--muted);">(built-in)</span>' : ''}</span>
-      ${!isBuiltin ? `<button class="del-btn" onclick="deleteEntity('${e.key}', '${e.name.replace(/'/g, "\\'")}')">Delete</button>` : ''}
+      ${!isBuiltin ? `<div class="action-btns">
+        <button class="edit-btn" onclick="openEditModal('${e.key}', '${safeName}')">✏️ Edit</button>
+        <button class="del-btn" onclick="deleteEntity('${e.key}', '${safeName}')">Delete</button>
+      </div>` : ''}
     </div>`;
   }).join('');
 }
@@ -823,6 +870,77 @@ async function deleteEntity(key, name){
     return;
   }
   await refreshEntityList();
+}
+
+/* ============== EDIT ENTITY ============== */
+// Store full entity data for edit prefill (loaded during refreshEntityList)
+let allEntityData = [];
+
+function openEditModal(key, name) {
+  document.getElementById('editEntityKey').value = key;
+  document.getElementById('editEntityTitle').textContent = name;
+  document.getElementById('editEntityName').value = name;
+  // Pre-fill URLs from sheet data if available
+  const entity = allEntityData.find(e => e.key === key);
+  document.getElementById('editOfferWith').value    = entity ? (entity.offer_with    || '') : '';
+  document.getElementById('editOfferWithout').value = entity ? (entity.offer_without || '') : '';
+  document.getElementById('editApptWith').value     = entity ? (entity.appt_with     || '') : '';
+  document.getElementById('editApptWithout').value  = entity ? (entity.appt_without  || '') : '';
+  const editMsg = document.getElementById('editMsg');
+  editMsg.style.display = 'none'; editMsg.className = 'admin-msg';
+  document.getElementById('editOverlay').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('editOverlay').classList.add('hidden');
+}
+
+async function submitEditEntity() {
+  const key          = document.getElementById('editEntityKey').value.trim();
+  const entityName   = document.getElementById('editEntityName').value.trim();
+  const offerWith    = document.getElementById('editOfferWith').value.trim();
+  const offerWithout = document.getElementById('editOfferWithout').value.trim();
+  const apptWith     = document.getElementById('editApptWith').value.trim();
+  const apptWithout  = document.getElementById('editApptWithout').value.trim();
+  const password     = document.getElementById('adminSavePw').value;
+
+  if (!entityName || !offerWith || !offerWithout || !apptWith || !apptWithout) {
+    showEditMsg('error', 'Please fill in all URL fields.'); return;
+  }
+  if (!password) {
+    showEditMsg('error', 'Admin password missing — please close and re-open the Admin Panel.'); return;
+  }
+
+  const btn = document.getElementById('saveEditBtn');
+  const sp  = document.getElementById('editSpinner');
+  btn.disabled = true; sp.style.display = 'inline-block';
+
+  const data = await callApi({
+    action: 'updateEntity',
+    password,
+    entityKey: key,
+    entityName,
+    offer_with:           offerWith,
+    offer_without:        offerWithout,
+    appointment_with:     apptWith,
+    appointment_without:  apptWithout
+  }, 20000);
+
+  btn.disabled = false; sp.style.display = 'none';
+
+  if (!data.success) {
+    showEditMsg('error', data.error || 'Could not update entity.'); return;
+  }
+  showEditMsg('success', '✓ ' + (data.message || 'Entity updated successfully.'));
+  // Refresh the entity list in admin panel and dropdown
+  await refreshEntityList();
+  setTimeout(closeEditModal, 1200);
+}
+
+function showEditMsg(type, text) {
+  const el = document.getElementById('editMsg');
+  el.className = 'admin-msg ' + type;
+  el.textContent = text;
 }
 
 /* ============== INIT ============== */
