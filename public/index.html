@@ -10,12 +10,15 @@
     --teal-900:#0b3d36; --teal-700:#0f5c4f; --emerald-500:#1e9e7c;
     --emerald-100:#e3f5ef; --paper:#fbfaf7; --ink:#16241f; --muted:#5b6b66;
     --line:#d8e6e1; --error:#b3261e; --error-bg:#fbeceb; --amber-bg:#fff6e0; --amber-line:#e8c468;
+    --admin-bg:#f4f0ff; --admin-line:#c4aef0; --admin-text:#3d2e7c;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:'Segoe UI', Tahoma, Arial, sans-serif;background:var(--paper);color:var(--ink);}
-  header{background:linear-gradient(135deg,var(--teal-900),var(--teal-700));color:#fff;padding:28px 24px 24px;}
-  header h1{margin:0 0 4px;font-size:22px;}
-  header p{margin:0;color:#cfe9e1;font-size:13px;}
+  header{background:linear-gradient(135deg,var(--teal-900),var(--teal-700));color:#fff;padding:28px 24px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+  header .header-left h1{margin:0 0 4px;font-size:22px;}
+  header .header-left p{margin:0;color:#cfe9e1;font-size:13px;}
+  .admin-link{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.3);color:#fff;padding:7px 13px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s;}
+  .admin-link:hover{background:rgba(255,255,255,.22);}
   .wrap{max-width:780px;margin:0 auto;padding:24px 16px 60px;}
   .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:18px;}
   .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal-700);margin:0 0 16px;padding-bottom:8px;border-bottom:1px solid var(--line);}
@@ -65,13 +68,39 @@
   .download-buttons{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
   .dl-btn{flex:1;min-width:180px;background:var(--teal-700);color:#fff;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
   .dl-btn:hover{background:var(--teal-900);}
+
+  /* ---- Admin Panel (overlay modal) ---- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .modal-box{background:#fff;border-radius:14px;padding:28px 24px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18);}
+  .modal-box h2{margin:0 0 4px;font-size:18px;color:var(--teal-900);}
+  .modal-box .modal-sub{font-size:13px;color:var(--muted);margin:0 0 20px;}
+  .modal-box .field{margin-bottom:14px;}
+  .modal-box label{font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px;}
+  .modal-box input{font-size:14px;}
+  .modal-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .btn-primary{background:var(--teal-700);color:#fff;padding:11px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-primary:hover{background:var(--teal-900);}
+  .btn-secondary{background:#f0f4f3;color:var(--ink);padding:11px 20px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-secondary:hover{background:var(--line);}
+  .admin-msg{margin-top:12px;padding:10px 13px;border-radius:8px;font-size:13px;display:none;}
+  .admin-msg.success{display:block;background:var(--emerald-100);color:var(--teal-900);border:1px solid var(--emerald-500);}
+  .admin-msg.error{display:block;background:var(--error-bg);color:var(--error);border:1px solid var(--error);}
+  .modal-divider{border:none;border-top:1px solid var(--line);margin:22px 0;}
+  .entity-list-item{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;background:#f8fbfa;border:1px solid var(--line);border-radius:7px;margin-bottom:8px;font-size:13.5px;}
+  .entity-list-item .entity-badge{font-size:11px;background:var(--emerald-100);color:var(--teal-700);border-radius:4px;padding:2px 7px;font-weight:600;margin-left:8px;}
+  .entity-list-item .del-btn{background:var(--error-bg);color:var(--error);border:1px solid var(--error);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;}
+  .modal-section-title{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin:0 0 10px;}
+  .url-hint{font-size:11.5px;color:var(--muted);margin-top:4px;}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Offer &amp; Appointment Letter Generator</h1>
-  <p>USDC Global · Learn Overseas</p>
+  <div class="header-left">
+    <h1>Offer &amp; Appointment Letter Generator</h1>
+    <p>USDC Global · Learn Overseas</p>
+  </div>
+  <button class="admin-link" onclick="openAdmin()">⚙ Admin Panel</button>
 </header>
 
 <div class="wrap">
@@ -129,7 +158,6 @@
     <div class="card">
       <h2>Step 1 — Download Template</h2>
       <div class="note">Download the template matching the Letter Type selected above, fill one row per employee, then upload it below. Only the basic details + monthly Gross Salary are needed — all salary breakup figures and Annual CTC are calculated automatically.</div>
-      <div id="seitoApptWarn" class="msg error hidden" style="margin-bottom:12px;">SEITO Appointment Letter template is not set up yet. Please add the Google Doc IDs in code.gs and redeploy, then come back to this.</div>
       <div class="template-btns">
         <a id="offerTemplateLink" href="/Offer_Letter_Bulk_Template.xlsx" download>⬇ Download Offer Letter Template</a>
         <a id="appointmentTemplateLink" href="/Appointment_Letter_Bulk_Template.xlsx" download>⬇ Download Appointment Letter Template</a>
@@ -153,10 +181,136 @@
 
 </div>
 
+<!-- ===================== ADMIN PANEL MODAL ===================== -->
+<div id="adminOverlay" class="modal-overlay hidden" onclick="handleOverlayClick(event)">
+  <div class="modal-box" id="adminBox">
+
+    <!-- Password Gate -->
+    <div id="adminGate">
+      <h2>🔐 Admin Panel</h2>
+      <p class="modal-sub">Enter the admin password to manage entities.</p>
+      <div class="field">
+        <label>Admin Password</label>
+        <input type="password" id="adminPwInput" placeholder="Enter password…" onkeydown="if(event.key==='Enter') unlockAdmin()">
+      </div>
+      <div class="modal-row">
+        <button class="btn-primary" onclick="unlockAdmin()">Unlock</button>
+        <button class="btn-secondary" onclick="closeAdmin()">Cancel</button>
+      </div>
+      <div class="admin-msg" id="gateMsg"></div>
+    </div>
+
+    <!-- Admin Content (hidden until unlocked) -->
+    <div id="adminContent" class="hidden">
+      <h2>⚙ Admin Panel</h2>
+      <p class="modal-sub">Manage entities and their letter templates. No code changes needed.</p>
+
+      <!-- Existing entities -->
+      <p class="modal-section-title">Current Entities</p>
+      <div id="existingEntityList">
+        <div style="color:var(--muted);font-size:13px;">Loading…</div>
+      </div>
+
+      <hr class="modal-divider">
+
+      <!-- Add new entity form -->
+      <p class="modal-section-title">Add New Entity</p>
+      <div class="field">
+        <label>Entity Display Name <span class="req">*</span></label>
+        <input type="text" id="adminEntityName" placeholder="e.g. ABC Institute" oninput="autoFillKey()">
+      </div>
+      <div class="field">
+        <label>Entity Key (auto-generated, must be unique)</label>
+        <input type="text" id="adminEntityKey" placeholder="e.g. abc_institute" style="background:#f8fbfa;">
+      </div>
+      <div class="field">
+        <label>Offer Letter – With Letterhead (Google Doc URL) <span class="req">*</span></label>
+        <input type="url" id="adminOfferWith" placeholder="https://docs.google.com/document/d/…">
+        <div class="url-hint">Open the Google Doc → Share → Copy link</div>
+      </div>
+      <div class="field">
+        <label>Offer Letter – Without Letterhead (Google Doc URL) <span class="req">*</span></label>
+        <input type="url" id="adminOfferWithout" placeholder="https://docs.google.com/document/d/…">
+      </div>
+      <div class="field">
+        <label>Appointment Letter – With Letterhead (Google Doc URL) <span class="req">*</span></label>
+        <input type="url" id="adminApptWith" placeholder="https://docs.google.com/document/d/…">
+      </div>
+      <div class="field">
+        <label>Appointment Letter – Without Letterhead (Google Doc URL) <span class="req">*</span></label>
+        <input type="url" id="adminApptWithout" placeholder="https://docs.google.com/document/d/…">
+      </div>
+      <div class="field">
+        <label>Admin Password (required to save) <span class="req">*</span></label>
+        <input type="password" id="adminSavePw" placeholder="Enter admin password…">
+      </div>
+      <div class="modal-row">
+        <button class="btn-primary" id="saveEntityBtn" onclick="saveEntity()">
+          <span class="spinner" id="adminSpinner" style="border-top-color:var(--teal-700);border-color:#ccc;display:none;"></span>
+          Save Entity
+        </button>
+        <button class="btn-secondary" onclick="closeAdmin()">Close</button>
+      </div>
+      <div class="admin-msg" id="adminSaveMsg"></div>
+    </div>
+
+  </div>
+</div>
+
 <script>
 /* ============== CONFIG ============== */
-// Same-origin: this page is served by the same Render server that exposes /api
 const API_URL = '/api';
+
+/* ============== API HELPER ============== */
+async function callApi(payload, timeoutMs = 100000){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    return await res.json();
+  } catch (err) {
+    if (err.name === 'AbortError') return { success: false, error: 'Request timed out.' };
+    return { success: false, error: 'Network error: ' + err.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ============== ENTITY LOADING ============== */
+// Populated on load; always has LO + SEITO at minimum
+let allEntities = [
+  { key: 'lo', name: 'Learn Overseas' },
+  { key: 'seito', name: 'SEITO' }
+];
+
+async function loadEntities() {
+  try {
+    const data = await callApi({ action: 'getEntities' }, 15000);
+    if (data.success && Array.isArray(data.entities) && data.entities.length > 0) {
+      allEntities = data.entities;
+    }
+  } catch (e) { /* use defaults */ }
+  populateEntityDropdown();
+}
+
+function populateEntityDropdown() {
+  const el = document.getElementById('entity');
+  const current = el.value;
+  el.innerHTML = '';
+  allEntities.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.key;
+    opt.textContent = e.name;
+    el.appendChild(opt);
+  });
+  // Restore selected value if still valid
+  if (allEntities.find(e => e.key === current)) el.value = current;
+}
 
 /* ============== FIELD DEFINITIONS ============== */
 const OFFER_NO_FIELD = { key:'Offer_Letter_No', type:'text', required:true, label:'Offer Letter No' };
@@ -189,7 +343,7 @@ const SALARY_PA_FIELDS = [
   { key:'Part_of_CTC_PA', label:'Part of CTC' },{ key:'Cost_to_Company_PA', label:'Cost to Company' }
 ].map(f => ({ ...f, type:'number', required:false }));
 
-/* ============== JS MIRROR OF SALARY FORMULA (live preview only) ============== */
+/* ============== SALARY FORMULA ============== */
 function computeSalaryBreakup(gross, annualIncentive){
   gross = Number(gross) || 0;
   annualIncentive = Number(annualIncentive) || 0;
@@ -266,7 +420,6 @@ function renderForm(){
 
   formSections.innerHTML = html;
 
-  // wire up auto-calc behavior
   const grossEl = document.getElementById('f_Total_Gross');
   const manualCheckbox = document.getElementById('manualBreakup');
   const allBreakupKeys = [...SALARY_PM_FIELDS, ...SALARY_PA_FIELDS].map(f => f.key);
@@ -292,7 +445,7 @@ function renderForm(){
   if (incentiveEl) incentiveEl.addEventListener('input', recalc);
   manualCheckbox.addEventListener('change', () => { setBreakupDisabled(!manualCheckbox.checked); if (!manualCheckbox.checked) recalc(); });
 
-  setBreakupDisabled(true); // auto-calc ON by default
+  setBreakupDisabled(true);
   recalc();
 }
 letterTypeEl.addEventListener('change', renderForm);
@@ -301,15 +454,10 @@ renderForm();
 
 function updateTemplateButtons(){
   const lt = letterTypeEl.value;
-  const ent = entityEl.value;
   const offerBtn = document.getElementById('offerTemplateLink');
   const apptBtn = document.getElementById('appointmentTemplateLink');
   if (offerBtn) offerBtn.classList.toggle('hidden', lt !== 'offer');
   if (apptBtn) apptBtn.classList.toggle('hidden', lt !== 'appointment');
-
-  // Show warning if SEITO appointment letter template not yet set up
-  const seitoWarn = document.getElementById('seitoApptWarn');
-  if (seitoWarn) seitoWarn.classList.toggle('hidden', !(ent === 'seito' && lt === 'appointment'));
 }
 letterTypeEl.addEventListener('change', updateTemplateButtons);
 entityEl.addEventListener('change', updateTemplateButtons);
@@ -338,27 +486,6 @@ function base64ToBlobDownload(base64, filename, mime){
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-async function callApi(payload, timeoutMs = 100000){
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-    return await res.json();
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      return { success: false, error: 'Request timed out after ' + (timeoutMs/1000) + 's. If this is the first request in a while, the server may be waking up — please try again in a moment.' };
-    }
-    return { success: false, error: 'Network error: ' + err.message };
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 form.addEventListener('submit', async (e) => {
@@ -431,9 +558,6 @@ function chunkArray(arr, size){
   return out;
 }
 
-// Converts a JS Date to a plain "YYYY-MM-DD" string using LOCAL date parts
-// (not toISOString(), which converts to UTC and can shift the date back by
-// a day for timezones ahead of UTC, e.g. India).
 function toLocalDateStr(d){
   const y = d.getFullYear();
   const m = String(d.getMonth()+1).padStart(2,'0');
@@ -468,7 +592,7 @@ bulkGenerateBtn.addEventListener('click', async () => {
         }
       });
       return mapped;
-    }).filter(r => r.Employee_Full_Name); // skip fully blank rows
+    }).filter(r => r.Employee_Full_Name);
   } catch (err) {
     showMsg(bulkMsg, 'error', 'Could not read the Excel file: ' + err.message);
     return;
@@ -555,6 +679,155 @@ async function downloadAllAsZip(results, type){
   }
   base64ToBlobDownload(data.zipBase64, data.zipFileName, 'application/zip');
 }
+
+/* ============== ADMIN PANEL ============== */
+let adminUnlocked = false;
+const BUILTIN_KEYS = ['lo', 'seito'];
+
+function openAdmin(){
+  document.getElementById('adminOverlay').classList.remove('hidden');
+  if (!adminUnlocked) {
+    document.getElementById('adminPwInput').value = '';
+    document.getElementById('gateMsg').style.display = 'none';
+    setTimeout(() => document.getElementById('adminPwInput').focus(), 100);
+  }
+}
+
+function closeAdmin(){
+  document.getElementById('adminOverlay').classList.add('hidden');
+}
+
+function handleOverlayClick(e){
+  if (e.target === document.getElementById('adminOverlay')) closeAdmin();
+}
+
+async function unlockAdmin(){
+  const pw = document.getElementById('adminPwInput').value;
+  if (!pw) { showAdminGateMsg('error', 'Please enter the password.'); return; }
+
+  // Verify password by making a dummy saveEntity call with just the password
+  // Actually, just show the panel — wrong password will be caught on save.
+  // For UX, we do a lightweight ping: call getEntities (always succeeds) and show the content.
+  document.getElementById('adminGate').classList.add('hidden');
+  document.getElementById('adminContent').classList.remove('hidden');
+  adminUnlocked = true;
+
+  // Save pw for later use in save/delete operations
+  document.getElementById('adminSavePw').value = pw;
+
+  // Load and render entity list
+  await refreshEntityList();
+}
+
+function showAdminGateMsg(type, text){
+  const el = document.getElementById('gateMsg');
+  el.className = 'admin-msg ' + type;
+  el.textContent = text;
+}
+
+function showAdminSaveMsg(type, text){
+  const el = document.getElementById('adminSaveMsg');
+  el.className = 'admin-msg ' + type;
+  el.textContent = text;
+}
+
+async function refreshEntityList(){
+  const listEl = document.getElementById('existingEntityList');
+  listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">Loading…</div>';
+
+  const data = await callApi({ action: 'getEntities' }, 15000);
+  if (data.success && data.entities) {
+    allEntities = data.entities;
+    populateEntityDropdown();
+  }
+
+  const entities = data.success ? data.entities : allEntities;
+  if (!entities || entities.length === 0) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">No entities found.</div>';
+    return;
+  }
+
+  listEl.innerHTML = entities.map(e => {
+    const isBuiltin = BUILTIN_KEYS.includes(e.key);
+    return `<div class="entity-list-item">
+      <span><strong>${e.name}</strong> <span class="entity-badge">${e.key}</span>${isBuiltin ? ' <span style="font-size:11px;color:var(--muted);">(built-in)</span>' : ''}</span>
+      ${!isBuiltin ? `<button class="del-btn" onclick="deleteEntity('${e.key}', '${e.name.replace(/'/g, "\\'")}')">Delete</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function autoFillKey(){
+  const name = document.getElementById('adminEntityName').value;
+  const key = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  document.getElementById('adminEntityKey').value = key;
+}
+
+async function saveEntity(){
+  const entityName = document.getElementById('adminEntityName').value.trim();
+  const entityKey  = document.getElementById('adminEntityKey').value.trim();
+  const offerWith    = document.getElementById('adminOfferWith').value.trim();
+  const offerWithout = document.getElementById('adminOfferWithout').value.trim();
+  const apptWith     = document.getElementById('adminApptWith').value.trim();
+  const apptWithout  = document.getElementById('adminApptWithout').value.trim();
+  const password     = document.getElementById('adminSavePw').value;
+
+  if (!entityName || !entityKey || !offerWith || !offerWithout || !apptWith || !apptWithout || !password) {
+    showAdminSaveMsg('error', 'Please fill in all fields including the admin password.');
+    return;
+  }
+
+  const btn = document.getElementById('saveEntityBtn');
+  const sp  = document.getElementById('adminSpinner');
+  btn.disabled = true; sp.style.display = 'inline-block';
+
+  const data = await callApi({
+    action: 'saveEntity',
+    password,
+    entityKey,
+    entityName,
+    offer_with:    offerWith,
+    offer_without: offerWithout,
+    appointment_with:    apptWith,
+    appointment_without: apptWithout
+  }, 20000);
+
+  btn.disabled = false; sp.style.display = 'none';
+
+  if (!data.success) {
+    showAdminSaveMsg('error', data.error || 'Could not save entity.');
+    return;
+  }
+
+  showAdminSaveMsg('success', '✓ ' + (data.message || 'Entity saved successfully.'));
+
+  // Clear form
+  document.getElementById('adminEntityName').value = '';
+  document.getElementById('adminEntityKey').value = '';
+  document.getElementById('adminOfferWith').value = '';
+  document.getElementById('adminOfferWithout').value = '';
+  document.getElementById('adminApptWith').value = '';
+  document.getElementById('adminApptWithout').value = '';
+
+  // Refresh list and dropdown
+  await refreshEntityList();
+}
+
+async function deleteEntity(key, name){
+  if (!confirm('Delete entity "' + name + '" (' + key + ')? This cannot be undone.')) return;
+  const password = document.getElementById('adminSavePw').value;
+  if (!password) { alert('Admin password is required. Please enter it in the password field above.'); return; }
+
+  const data = await callApi({ action: 'deleteEntity', password, entityKey: key }, 15000);
+  if (!data.success) {
+    alert('Could not delete: ' + (data.error || 'Unknown error.'));
+    return;
+  }
+  await refreshEntityList();
+}
+
+/* ============== INIT ============== */
+// Load dynamic entity list on page load (non-blocking)
+loadEntities();
 </script>
 
 </body>
